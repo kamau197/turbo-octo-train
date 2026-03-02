@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat</title>
+</head>
+<body>
+
+<h3>Chats</h3>
+<button onclick="openModal()">Create Chat</button>
+
+<div id="chatList"></div>
+<hr>
+
+<div id="messages"></div>
+
+<input id="msg" placeholder="Message">
+<button onclick="sendMessage()">Send</button>
+
+<div id="modal" style="display:none">
+  <input id="search" placeholder="Username or User ID">
+  <button onclick="findUser()">Find</button>
+  <div id="result"></div>
+</div>
+
+<script>
+const API = "http://localhost:3000"
+const token = localStorage.getItem("token")
+let currentChat = null
+
+function openModal() {
+  modal.style.display = "block"
+}
+
+async function findUser() {
+  const res = await fetch(API + "/user/" + search.value, {
+    headers: { "Authorization": "Bearer " + token }
+  })
+
+  const user = await res.json()
+
+  if (!user) return result.innerHTML = "User not found"
+
+  result.innerHTML = `
+    Found: ${user.username}<br>
+    <button onclick="startChat('${user.id}')">Start Chat</button>
+  `
+}
+
+async function startChat(id) {
+  await fetch(API + "/chat/start", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({ userId: id })
+  })
+
+  modal.style.display = "none"
+  loadChats()
+}
+
+async function loadChats() {
+  const res = await fetch(API + "/chat/my", {
+    headers: { "Authorization": "Bearer " + token }
+  })
+
+  const chats = await res.json()
+  chatList.innerHTML = ""
+
+  chats.forEach(c => {
+    const div = document.createElement("div")
+    div.innerText = c.id
+    div.onclick = () => openChat(c.id)
+    chatList.appendChild(div)
+  })
+}
+
+async function openChat(id) {
+  currentChat = id
+
+  const res = await fetch(API + "/chat/messages/" + id, {
+    headers: { "Authorization": "Bearer " + token }
+  })
+
+  const msgs = await res.json()
+  messages.innerHTML = msgs.map(m => `<p>${m.content}</p>`).join("")
+}
+
+async function sendMessage() {
+  if (!currentChat) return alert("Select chat")
+
+  await fetch(API + "/chat/send", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({
+      chatId: currentChat,
+      content: msg.value
+    })
+  })
+
+  msg.value = ""
+  openChat(currentChat)
+}
+
+loadChats()
+</script>
+
+</body>
+  </html>
