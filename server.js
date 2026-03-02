@@ -3,6 +3,8 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 import { createClient } from '@supabase/supabase-js'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 dotenv.config()
 
@@ -10,6 +12,20 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// ---- Path Fix for ES Modules ----
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// ---- Serve Frontend Files From Root Folder ----
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'))
+})
+
+app.get('/chat.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'chat.html'))
+})
+
+// ---- Supabase ----
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
@@ -119,6 +135,7 @@ app.post('/chat/send', verifyToken, async (req, res) => {
   res.json(data)
 })
 
-app.listen(process.env.PORT, () => {
-  console.log("Server running on port", process.env.PORT)
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT)
 })
